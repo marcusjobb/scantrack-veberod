@@ -1,0 +1,53 @@
+name: Bygg och deploya ScanTrack-nod
+
+# TODO: När ska denna pipeline köras?
+# Den ska triggas automatiskt när du pushar till main-branchen.
+on:
+  # ???
+
+jobs:
+  bygg-och-deploya:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Hämta koden
+        uses: actions/checkout@v4
+
+      # TODO: Logga in mot Azure Container Registry
+      # Använd secrets: ACR_LOGIN_SERVER, ACR_USERNAME, ACR_PASSWORD
+      # Kommando: docker login
+      - name: Logga in mot ACR
+        run: |
+          # ???
+
+      # TODO: Bygg Docker-imagen med multi-stage build
+      # Tagga den som <registry>/<image-name>:latest
+      # Tänk på: Dockerfile ligger i ScanTrackNode/
+      - name: Bygg Docker-imagen
+        run: |
+          # ???
+
+      # TODO: Pusha imagen till ACR
+      - name: Pusha till ACR
+        run: |
+          # ???
+
+      # TODO: Logga in mot Azure med Azure CLI
+      # Använd GitHub Action: azure/login@v1
+      # Secret: AZURE_CREDENTIALS
+      - name: Logga in mot Azure
+        uses: # ???
+        with:
+          creds: # ???
+
+      # TODO: Deploya till Azure Container Instances
+      # Kommando: az container create
+      # Krav:
+      #   - Image från ACR
+      #   - Port 8080
+      #   - Miljövariablerna CITY_NAME, NODE_URL och REGISTRY_URL
+      #     ska hämtas från GitHub Secrets — aldrig hårdkodas här
+      #   - Noden ska ha ett unikt namn (tips: använd ${{ secrets.CITY_NAME }})
+      - name: Deploya till ACI
+        run: |
+          # ???
