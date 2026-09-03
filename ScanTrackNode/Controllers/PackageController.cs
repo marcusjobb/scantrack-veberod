@@ -49,10 +49,8 @@ public class PaketController : ControllerBase
             return Ok(new { status = "levererat", stad = cityName, paket = package });
         }
 
-        // Hämta vilka noder som faktiskt är online just nu
         var onlineNodes = await _registry.GetNodesAsync();
 
-        // Dijkstra hittar bara vägar via städer som är registrerade
         var nextHop = _dijkstra.NextHop(cityName, package.Destination, package.History, onlineNodes.Keys);
 
         if (nextHop == null)
@@ -91,22 +89,4 @@ public class PaketController : ControllerBase
             mottagna = _store.All.Count,
             uppeSedanUtc = DateTime.UtcNow
         });
-
-    [HttpGet("/route")]
-    public async Task<IActionResult> VisaRutt([FromQuery] string from, [FromQuery] string to)
-    {
-        var onlineNodes = await _registry.GetNodesAsync();
-        var route = _dijkstra.FullRouteWithPhantoms(from, to, onlineNodes.Keys);
-
-        if (route.Count < 2)
-            return NotFound(new
-            {
-                fel = $"Ingen rutt från {from} till {to} med nuvarande noder online",
-                onlineNoder = onlineNodes.Keys
-            });
-
-        // Städer prefixade med * är offline-genomfarter ("förbi X"), inte riktiga hopp.
-        var läsbar = route.Select(s => s.StartsWith('*') ? $"förbi {s[1..]}" : s).ToList();
-        return Ok(new { från = from, till = to, rutt = route, läsbarRutt = läsbar, antalStopp = route.Count - 2 });
-    }
 }
