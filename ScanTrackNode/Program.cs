@@ -17,6 +17,7 @@ builder.Services.AddSingleton(new DijkstraService(graph));
 
 builder.Services.AddSingleton<NodeRegistry>();
 builder.Services.AddSingleton<PackageForwarder>();
+builder.Services.AddSingleton<PackageStore>();
 
 var app = builder.Build();
 

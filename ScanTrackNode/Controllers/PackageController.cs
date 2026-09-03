@@ -12,21 +12,22 @@ public class PaketController : ControllerBase
     private readonly DijkstraService _dijkstra;
     private readonly PackageForwarder _forwarder;
     private readonly NodeRegistry _registry;
+    private readonly PackageStore _store;
     private readonly IConfiguration _config;
     private readonly ILogger<PaketController> _logger;
-
-    private static readonly List<Package> _received = new();
 
     public PaketController(
         DijkstraService dijkstra,
         PackageForwarder forwarder,
         NodeRegistry registry,
+        PackageStore store,
         IConfiguration config,
         ILogger<PaketController> logger)
     {
         _dijkstra = dijkstra;
         _forwarder = forwarder;
         _registry = registry;
+        _store = store;
         _config = config;
         _logger = logger;
     }
@@ -43,7 +44,7 @@ public class PaketController : ControllerBase
 
         if (string.Equals(cityName, package.Destination, StringComparison.OrdinalIgnoreCase))
         {
-            _received.Add(package);
+            _store.Add(package);
             _logger.LogInformation("Paket {Id} levererat till {City}!", package.PackageId, cityName);
             return Ok(new { status = "levererat", stad = cityName, paket = package });
         }
@@ -79,7 +80,7 @@ public class PaketController : ControllerBase
 
     [HttpGet]
     public IActionResult Lista() =>
-        Ok(new { stad = _config["CITY_NAME"], mottagna = _received });
+        Ok(new { stad = _config["CITY_NAME"], mottagna = _store.All });
 
     [HttpGet("/status")]
     public IActionResult Status() =>
@@ -87,7 +88,7 @@ public class PaketController : ControllerBase
         {
             stad = _config["CITY_NAME"],
             url = _config["NODE_URL"],
-            mottagna = _received.Count,
+            mottagna = _store.All.Count,
             uppeSedanUtc = DateTime.UtcNow
         });
 
@@ -95,7 +96,7 @@ public class PaketController : ControllerBase
     public async Task<IActionResult> VisaRutt([FromQuery] string from, [FromQuery] string to)
     {
         var onlineNodes = await _registry.GetNodesAsync();
-        var route = _dijkstra.FullRoute(from, to, Enumerable.Empty<string>(), onlineNodes.Keys);
+        var route = _dijkstra.FullRouteWithPhantoms(from, to, onlineNodes.Keys);
 
         if (route.Count < 2)
             return NotFound(new
@@ -104,6 +105,8 @@ public class PaketController : ControllerBase
                 onlineNoder = onlineNodes.Keys
             });
 
-        return Ok(new { från = from, till = to, rutt = route, antalStopp = route.Count - 2 });
+        // Städer prefixade med * är offline-genomfarter ("förbi X"), inte riktiga hopp.
+        var läsbar = route.Select(s => s.StartsWith('*') ? $"förbi {s[1..]}" : s).ToList();
+        return Ok(new { från = from, till = to, rutt = route, läsbarRutt = läsbar, antalStopp = route.Count - 2 });
     }
 }
